@@ -10,11 +10,46 @@ const bcrypt = require('bcryptjs')
 
 const Event = require('./models/event');
     // function that takes js template literal string, used to define schema
-
 // creates express app object
 const app = express();
 
 app.use(bodyParser.json());
+
+const events = eventIds => {
+    return Event.find({_id: {$in: eventIds}})
+        .then(events => {
+            return events.map(event => {
+                return { 
+                    ...event._doc, 
+                    _id: event.id, 
+                    creator: user.bind(this, event.creator)
+                };
+            });
+        })
+        .catch(err => {
+            throw err
+        });
+}
+
+const user = userId => {
+    return User.findById(userId)
+        .then(user => {
+            return { 
+                ...user.doc, 
+                _id: user.id,
+                createdEvents: events.bind(this, user._doc.createdEvents)
+                };
+                // replace createdEvents witha  functino,
+                    // this will see if the prop is va lue, and just give the value.
+                    // or, if it is a function, it will return the result of the function
+                        // flexibility of graphql
+                            // allows us to model the relations in a flexible way
+                            // now, when we get events, the creator calls the function and gives the data returned by user function...
+        })
+        .catch(err => {
+            throw err;
+        })
+}
 
 // app.get('/', (req, res, next) =>{
 //     res.send('Hello World!');
@@ -32,12 +67,13 @@ app.use('/graphql', graphqlHttp({
                 description: String!
                 price: Float!
                 date: String!
+                creator: User!
             }
-
             type User {
                 _id: ID!
                 email: String!
                 password: String
+                createdEvents: [Event!]
             }
             input EventInput {
                 title: String!
@@ -68,14 +104,18 @@ app.use('/graphql', graphqlHttp({
             return Event.find()
                 .then(events => {
                     return events.map(event => {
-                        return { ...event._doc, _id: event.id };
-                    })
+                        return { 
+                            ...event._doc, 
+                            _id: event.id,
+                            creator: user.bind(this, event._doc.creator)
+                        };
+                    });
                 })
                 .catch(err => {
                 throw err;
             });
         },
-        createEvent : args => {
+        createEvent: args => {
             const event = new Event({
                 title: args.eventInput.title,
                 description: args.eventInput.description,
